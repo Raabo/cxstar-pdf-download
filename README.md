@@ -1,6 +1,6 @@
 <h2 align="center">
     <p><img src="./images/logo.png" width="100" alt="logo"></p>
-    <a href="https://github.com/52beijixing/cxstar-pdf-download">Cxstar PDF Download</a>
+    <a href="https://github.com/Raabo/cxstar-pdf-download">Cxstar PDF Download</a>
 </h2>
 
 <p align="center">
@@ -8,21 +8,23 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/52beijixing/cxstar-pdf-download">
-        <img src="./images/description.png" alt="description">
+    <a href="https://github.com/Raabo/cxstar-pdf-download">
+        <img src="./images/ui.png" alt="description">
     </a>
 </p>
 
+## 功能特点
+- 支持下载完整PDF书籍
+- 提供PDF压缩功能（需安装Ghostscript）
+- 简单易用的图形界面
+- 支持断点续传
 
-## 使用须知
-### 获取Authorization（需要先登录）
-1、打开【浏览器调试工具】(一般是按F12）
-
-2、选择【控制台】（Console）
-
-3、输入下面代码并回车就会自己复制到粘贴板
-
-```
+## 使用前准备
+### 1. 获取Authorization（需要先登录）
+1. 打开【浏览器调试工具】(按F12）
+2. 选择【控制台】（Console）
+3. 复制并粘贴以下代码，回车执行后会自动复制到剪贴板：
+```javascript
 copy(document.cookie.match(/token=([^;]+)/)[1])
 ```
 
@@ -38,13 +40,14 @@ copy(document.cookie.match(/token=([^;]+)/)[1])
 
 
 ## 使用方法
-### 1、直接下载打包好的exe文件
-https://github.com/52beijixing/cxstar-pdf-download/releases
-
-### 2、本地使用python运行
+### 方法一：使用打包好的程序（推荐）
+1. 从 Releases 下载最新版本
+2. 解压后直接运行exe文件
+3. 输入Authorization和书籍ID即可开始下载
+### 方法二：本地运行Python代码
 1、下载项目文件
 ```
-git clone https://github.com/52beijixing/cxstar-pdf-download
+git clone https://github.com/Raabo/cxstar-pdf-download
 ```
 2、进入项目代码路径
 ```
@@ -61,10 +64,19 @@ pip install -U -r requirements.txt
 python main.py
 ```
 
-## 注意
-* Authorization有效但是没有权限观看全书时，会下载试看部分的内容
+## PDF压缩功能
+如需使用PDF压缩功能：
 
-* 下载下来的文件都是虚大的，本人没有能力进行PDF优化，但是您可以通过`Adobe Acrobat Pro`或者`福昕高级PDF编辑器`进行PDF压缩（PDF优化），您也可以通过其他类似工具进行压缩（优化），大约能达到很接近官方的文件大小，清晰度也几乎没有区别
+1. 下载并安装 Ghostscript
+2. 在程序中勾选"启用PDF压缩"选项
+## 注意事项
+- Authorization有效期有限，失效后需要重新获取
+- 当Authorization有效但没有完整阅读权限时，将只能下载试看部分
+- 建议控制下载频率，每天建议不超过10本
+- 下载时请确保网络稳定
+- 仅供个人学习使用，请勿用于商业用途
+## 常见问题
+Q: 下载失败怎么办？ A: 请检查网络连接和Authorization是否有效
 
-* 建议不要特别下载次数特别频繁（一天10来本完全没问题）
+Q: 压缩功能无法使用？ A: 请确认是否正确安装了Ghostscript
 

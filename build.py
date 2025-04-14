@@ -1,9 +1,26 @@
 import PyInstaller.__main__
 import os
 import sys
+import shutil
 
 # 获取当前目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# 清理之前的打包文件
+dist_dir = os.path.join(current_dir, 'dist')
+build_dir = os.path.join(current_dir, 'build')
+spec_file = os.path.join(current_dir, '超星电子书下载工具.spec')
+
+try:
+    if os.path.exists(dist_dir):
+        shutil.rmtree(dist_dir)
+    if os.path.exists(build_dir):
+        shutil.rmtree(build_dir)
+    if os.path.exists(spec_file):
+        os.remove(spec_file)
+    print("已清理之前的打包文件")
+except Exception as e:
+    print(f"清理文件时出错: {str(e)}")
 
 # 定义打包选项
 options = [
@@ -12,7 +29,9 @@ options = [
     '--windowed',  # 使用窗口模式（不显示控制台）
     '--clean',  # 清理临时文件
     '--noconfirm',  # 不询问确认
-    # 移除图标选项，除非您有图标文件
+    
+    # 添加多进程支持
+    '--runtime-hook=mp_hook.py',  # 添加运行时钩子
     
     # 排除不需要的模块以减小体积
     '--exclude-module=matplotlib',
@@ -50,6 +69,22 @@ options = [
     
     '--hidden-import=tkinter',
     '--hidden-import=tkinter.ttk',
+    '--hidden-import=io',  # 添加io模块
+    '--hidden-import=os',  # 添加os模块
+    '--hidden-import=sys',  # 添加sys模块
+    '--hidden-import=tempfile',  # 添加tempfile模块
+    '--hidden-import=multiprocessing',  # 添加multiprocessing模块
+    '--hidden-import=multiprocessing.pool',  # 添加multiprocessing.pool模块
+    '--hidden-import=multiprocessing.connection',  # 添加multiprocessing.connection模块
+    '--hidden-import=multiprocessing.queues',  # 添加multiprocessing.queues模块
+    '--hidden-import=multiprocessing.synchronize',  # 添加multiprocessing.synchronize模块
+    
+    # 添加数据文件收集
+    '--collect-data=requests',
+    '--collect-data=pypdf',
+    
+    # 移除调试信息
+    # '--debug=all',  # 在打包时生成详细的调试信息
     
     # 优化选项
     '--noupx',  # 不使用UPX压缩（有时会导致问题）

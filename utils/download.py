@@ -97,32 +97,87 @@ def pdfDownload(book_data, book_id, ua, compress_level=2):
     
     if page_pdf_list:
         pool = Pool()
-        if not book_data.get("webPath"):
-            # 使用tqdm显示进度
-            list(tqdm.tqdm(pool.imap(pagePdfDownload, page_pdf_list), total=len(page_pdf_list), desc="下载进度"))
-        else:
-            list(tqdm.tqdm(pool.imap(saveImagePdf, page_pdf_list), total=len(page_pdf_list), desc="下载进度"))
-        pool.close()
-        pool.join()
+        try:
+            # 使用更安全的方式显示进度
+            if not book_data.get("webPath"):
+                # 替换tqdm进度条，使用自定义的进度显示
+                total = len(page_pdf_list)
+                completed = 0
+                print(f"开始下载 {total} 页PDF...")
+                
+                # 使用map而不是imap，并手动显示进度
+                for _ in pool.imap_unordered(pagePdfDownload, page_pdf_list):
+                    completed += 1
+                    if completed % 10 == 0 or completed == total:  # 每10页或最后一页显示一次进度
+                        print(f"下载进度: {completed}/{total} 页 ({completed/total*100:.1f}%)")
+            else:
+                # 图片PDF的处理
+                total = len(page_pdf_list)
+                completed = 0
+                print(f"开始下载 {total} 页图片PDF...")
+                
+                for _ in pool.imap_unordered(saveImagePdf, page_pdf_list):
+                    completed += 1
+                    if completed % 10 == 0 or completed == total:  # 每10页或最后一页显示一次进度
+                        print(f"下载进度: {completed}/{total} 页 ({completed/total*100:.1f}%)")
+        except Exception as e:
+            print(f"下载过程中出错: {str(e)}")
+            import traceback
+            print(f"错误详情: {traceback.format_exc()}")
+        finally:
+            pool.close()
+            pool.join()
     else:
         print("所有页面已下载完成，跳过下载步骤")
 
     print("正在合并所有pdf中...")
+    valid_pages = 0
     for i in range(total_page):
         temp_file_name = book_id + "/" + str(i) + ".pdf"
-        # 打开单页PDF并读取所有页面
-        with open(temp_file_name, 'rb') as f:
-            reader = PdfReader(f)
-            # 确保添加文件的第一页
-            merger.add_page(reader.pages[0])
+        try:
+            # 检查文件是否存在且大小正常
+            if not os.path.exists(temp_file_name) or os.path.getsize(temp_file_name) == 0:
+                print(f"警告: 页面 {i+1} 文件不存在或为空，跳过此页")
+                continue
+                
+            # 尝试打开PDF文件并验证其完整性
+            try:
+                with open(temp_file_name, 'rb') as f:
+                    reader = PdfReader(f)
+                    if len(reader.pages) > 0:
+                        # 确保添加文件的第一页
+                        merger.add_page(reader.pages[0])
+                        valid_pages += 1
+                    else:
+                        print(f"警告: 页面 {i+1} 没有内容，跳过此页")
+            except Exception as e:
+                print(f"警告: 无法读取页面 {i+1}，错误: {str(e)}，跳过此页")
+                continue
+        except Exception as e:
+            print(f"处理页面 {i+1} 时出错: {str(e)}")
+            continue
+    
+    if valid_pages == 0:
+        print("错误: 没有有效的页面可以合并，无法创建PDF")
+        return
+    
+    print(f"成功合并了 {valid_pages}/{total_page} 页")
 
     # 设置压缩选项
     if compress_level > 0:
         print(f"正在以压缩级别 {compress_level} 压缩PDF...")
         merger.compress_content_streams = True  # 这会压缩PDF内容流
 
-    merger.write(pdf_name)
-    merger.close()
+    try:
+        print(f"正在写入最终PDF文件: {pdf_name}")
+        merger.write(pdf_name)
+        merger.close()
+        print("PDF文件写入成功")
+    except Exception as e:
+        print(f"写入PDF文件时出错: {str(e)}")
+        import traceback
+        print(f"错误详情: {traceback.format_exc()}")
+        return
 
     # 删除缓存的文件及目录
     print("正在删除临时文件及目录...")
@@ -148,12 +203,35 @@ def pagePdfDownload(page_pdf):
     
     # 检查文件是否已存在且大小正常
     if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
-        return
+        # 尝试验证PDF文件的完整性
+        try:
+            with open(file_name, 'rb') as f:
+                PdfReader(f)
+            return  # 文件有效，直接返回
+        except Exception:
+            print(f"文件 {file_name} 已存在但无效，重新下载")
+            # 文件无效，继续下载
     
-    temp = getPagePdfInfo(url, ua)
-    temp_file_name = file_name
-    with open(temp_file_name, 'wb') as temp_file:
-        temp_file.write(temp)
+    try:
+        temp = getPagePdfInfo(url, ua)
+        
+        # 验证下载的内容是否为有效的PDF
+        if not temp.startswith(b'%PDF-'):
+            print(f"警告: 从 {url} 下载的内容不是有效的PDF，跳过")
+            return
+            
+        # 写入文件
+        with open(file_name, 'wb') as temp_file:
+            temp_file.write(temp)
+            
+        # 再次验证写入的文件
+        try:
+            with open(file_name, 'rb') as f:
+                PdfReader(f)
+        except Exception as e:
+            print(f"警告: 写入的文件 {file_name} 不是有效的PDF: {str(e)}")
+    except Exception as e:
+        print(f"下载页面时出错: {str(e)}")
 
 
 # 将图片保存为pdf并下载
@@ -319,7 +397,16 @@ def compressPdf(file_name, compress_level=2):
         ] + params + [file_name]
         
         print(f"正在使用Ghostscript压缩PDF，压缩级别: {compress_level}...")
-        result = subprocess.run(gs_cmd, capture_output=True, text=True)
+        
+        # 使用subprocess.STARTUPINFO来隐藏窗口
+        startupinfo = None
+        if os.name == 'nt':  # 仅在Windows上设置
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0  # SW_HIDE
+        
+        # 使用startupinfo参数来隐藏窗口
+        result = subprocess.run(gs_cmd, capture_output=True, text=True, startupinfo=startupinfo)
         
         if result.returncode != 0:
             print(f"Ghostscript压缩失败: {result.stderr}")

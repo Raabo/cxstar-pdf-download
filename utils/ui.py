@@ -10,16 +10,30 @@ class RedirectText:
     def __init__(self, text_widget):
         self.text_widget = text_widget
         self.buffer = StringIO()
+        self.original_stdout = sys.stdout  # 保存原始的stdout
 
     def write(self, string):
-        self.buffer.write(string)
-        self.text_widget.configure(state="normal")
-        self.text_widget.insert(tk.END, string)
-        self.text_widget.see(tk.END)
-        self.text_widget.configure(state="disabled")
+        try:
+            self.buffer.write(string)
+            self.text_widget.configure(state="normal")
+            self.text_widget.insert(tk.END, string)
+            self.text_widget.see(tk.END)
+            self.text_widget.configure(state="disabled")
+        except Exception as e:
+            # 如果写入UI出错，尝试写入到原始stdout
+            try:
+                self.original_stdout.write(f"UI写入错误: {str(e)}, 原始消息: {string}\n")
+            except:
+                pass
     
     def flush(self):
-        pass
+        try:
+            self.buffer.flush()
+        except Exception as e:
+            try:
+                self.original_stdout.write(f"UI刷新错误: {str(e)}\n")
+            except:
+                pass
 
 # 添加一个模拟输入类，用于替代标准输入
 class MockInput:
@@ -194,8 +208,11 @@ class DownloaderUI:
         # 设置模拟输入的响应
         mock_input.set_response("请输入代表您身份信息的Authorization:\n>>>", auth)
         mock_input.set_response("请输入书籍id:\n>>>", book_id)
-        mock_input.set_response("是否继续上次的下载？(y/n): ", "n")
+        mock_input.set_response("是否继续上次的下载？(y/n): ", "y")
         mock_input.set_response("是否重新下载？(y/n): ", "y")
+        mock_input.set_response("是否合并PDF？(y/n): ", "y")  # 添加合并PDF的响应
+        mock_input.set_response("是否压缩PDF？(y/n): ", "y")  # 添加压缩PDF的响应
+        mock_input.set_response("请选择压缩级别(0-3): ", str(compress_level))  # 添加压缩级别的响应
         
         # 替换内置input函数
         original_input = __builtins__['input']
@@ -262,19 +279,28 @@ class DownloaderUI:
             # 打印书籍信息并获取书籍类型
             book_type = disposeBookInfo(book_info)
             
-            if book_type == 1:
-                book_data = web_info.getNewPdfInfo(user.book_id, user.school_id)
-                pdfDownload(book_data, user.book_id, user_agent, compress_level)
-            elif book_type == 2:
-                book_data = web_info.getOldPdfWebInfo(user.book_id, user.school_id)
-                pdfDownload(book_data, user.book_id, user_agent, compress_level)
-            else:
-                print("不支持的书籍类型")
+            try:
+                if book_type == 1:
+                    book_data = web_info.getNewPdfInfo(user.book_id, user.school_id)
+                    print("开始下载新版PDF...")
+                    pdfDownload(book_data, user.book_id, user_agent, compress_level)
+                elif book_type == 2:
+                    book_data = web_info.getOldPdfWebInfo(user.book_id, user.school_id)
+                    print("开始下载旧版PDF...")
+                    pdfDownload(book_data, user.book_id, user_agent, compress_level)
+                else:
+                    print("不支持的书籍类型")
+            except Exception as e:
+                print(f"PDF下载或处理过程中出错: {str(e)}")
+                import traceback
+                print(f"错误详情: {traceback.format_exc()}")
                 
             print("下载任务完成")
             
         except Exception as e:
-            print(f"下载过程中出错: {e}")
+            print(f"下载过程中出错: {str(e)}")
+            import traceback
+            print(f"错误详情: {traceback.format_exc()}")
         finally:
             # 恢复原始目录
             os.chdir(original_dir)

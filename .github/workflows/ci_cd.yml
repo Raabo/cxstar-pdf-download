@@ -139,11 +139,20 @@ jobs:
       run: |
         mkdir -p dist/release
         # Copy Linux files
-        cp -r dist/linux/* dist/release/ 2>/dev/null || true
+        if [ -d dist/linux ] && [ "$(ls -A dist/linux 2>/dev/null)" ]; then
+          cp -r dist/linux/* dist/release/
+          echo "Copied Linux files:"
+          ls -la dist/release/
+        fi
         # Copy Windows files
-        cp -r dist/windows/* dist/release/ 2>/dev/null || true
-        # List all files
-        ls -la dist/release/
+        if [ -d dist/windows ] && [ "$(ls -A dist/windows 2>/dev/null)" ]; then
+          cp -r dist/windows/* dist/release/
+          echo "Copied Windows files:"
+          ls -la dist/release/
+        fi
+        # List all files to be released
+        echo "All files in dist/release/:"
+        find dist/release/ -type f
 
     - name: Checkout repository for git history
       uses: actions/checkout@v4

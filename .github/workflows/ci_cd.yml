@@ -100,6 +100,11 @@ jobs:
         name: cxstar-pdf-download-executable
         path: dist/
 
+    - name: Checkout repository for git history
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
     - name: Generate version number
       id: version
       run: |

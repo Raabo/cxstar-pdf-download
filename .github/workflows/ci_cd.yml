@@ -72,15 +72,16 @@ jobs:
     - name: Install build tools
       run: |
         python -m pip install --upgrade pip
+        pip install -r requirements.txt
         pip install build twine
 
-    - name: Build package
-      run: python -m build
+    - name: Build executable with PyInstaller
+      run: python build.py
 
     - name: Store distribution packages
       uses: actions/upload-artifact@v4
       with:
-        name: python-package-distributions
+        name: cxstar-pdf-download-executable
         path: dist/
 
   release:
@@ -96,7 +97,7 @@ jobs:
     - name: Download distribution packages
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
+        name: cxstar-pdf-download-executable
         path: dist/
 
     - name: Generate version number
@@ -110,13 +111,6 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           echo "version=dev-${TIMESTAMP}-${SHORT_SHA}" >> $GITHUB_OUTPUT
         fi
-
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        # Note: For dev builds, consider using TestPyPI instead
-        # repository-url: https://test.pypi.org/legacy/
 
     - name: Extract release notes
       id: extract_notes

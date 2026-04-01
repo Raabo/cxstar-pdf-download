@@ -140,19 +140,37 @@ jobs:
         mkdir -p dist/release
         # Copy Linux files
         if [ -d dist/linux ] && [ "$(ls -A dist/linux 2>/dev/null)" ]; then
-          cp -r dist/linux/* dist/release/
+          cp -rv dist/linux/* dist/release/
           echo "Copied Linux files:"
-          ls -la dist/release/
+          ls -laR dist/release/
+        else
+          echo "Warning: dist/linux is empty or does not exist"
         fi
         # Copy Windows files
         if [ -d dist/windows ] && [ "$(ls -A dist/windows 2>/dev/null)" ]; then
-          cp -r dist/windows/* dist/release/
+          # Check if it's a zip file and extract it
+          for file in dist/windows/*; do
+            if [[ "$file" == *.zip ]]; then
+              echo "Extracting zip file: $file"
+              unzip -o "$file" -d dist/release/
+            elif [ -d "$file" ]; then
+              echo "Copying directory: $file"
+              cp -rv "$file"/* dist/release/
+            else
+              echo "Copying file: $file"
+              cp -rv "$file" dist/release/
+            fi
+          done
           echo "Copied Windows files:"
-          ls -la dist/release/
+          ls -laR dist/release/
+        else
+          echo "Warning: dist/windows is empty or does not exist"
         fi
-        # List all files to be released
-        echo "All files in dist/release/:"
-        find dist/release/ -type f
+        # List all files to be released with details
+        echo "=== All files in dist/release/ ==="
+        find dist/release/ -type f -exec ls -lh {} \;
+        echo "=== File count ==="
+        find dist/release/ -type f | wc -l
 
     - name: Checkout repository for git history
       uses: actions/checkout@v4

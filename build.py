@@ -3,6 +3,11 @@ import os
 import sys
 import shutil
 
+# 设置标准输出编码为 UTF-8，避免 Windows 控制台编码问题
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 # 获取当前目录
 current_dir = os.path.dirname(os.path.abspath(__file__))
 

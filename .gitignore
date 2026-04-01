@@ -1,4 +1,5 @@
 ```
-# Configuration and workflow files
-.github/
+# CI/CD related
+.github/workflows/
+
 ```
